@@ -1,77 +1,76 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"os"
 
 	"github.com/GuySWatson/cloudbuildops"
-	"google.golang.org/api/cloudbuild/v1"
+	"github.com/urfave/cli"
 )
 
 func main() {
 	cb := cloudbuildops.CB{}
 	cb.Init()
 
-	triggerConfig := cloudbuildops.ReadTriggerConfig("example.yml")
-	repoName := fmt.Sprintf("%s_%s_%s",
-		triggerConfig.Git.Provider,
-		triggerConfig.Git.Project,
-		triggerConfig.Git.Repo,
-	)
+	app := &cli.App{
+		Name:        "Cloud Build Ops",
+		Description: "Cloud Build Ops is a tool that lets you manage Cloud Build pipeline configuration from yaml files which makes managing Cloud Build much easier and faster.",
+		Commands: []cli.Command{
+			{
+				Name:  "get",
+				Usage: "Write all existing cloud build pipelines to file",
+				Action: func(c *cli.Context) error {
+					err := cb.Get(c.String("p"), c.String("o"))
+					if err != nil {
+						return err
+					}
 
-	for _, trigger := range triggerConfig.Triggers {
-		// Check repo exists
-		_, err := cb.GetRepo(repoName, trigger.Projectid)
-		if err != nil {
-			log.Panicf("Error getting repo (Probably doesn't exist): %s", err)
-		}
-
-		// Check trigger already exists
-		currentTrigger, err := cb.GetTrigger(repoName, trigger.Name, trigger.Projectid)
-		if err != nil {
-			log.Panicf("Error getting repo (Probably doesn't exist): %s", err)
-		}
-
-		if currentTrigger == nil {
-			// Add trigger
-			err := cb.CreateTrigger(&cloudbuild.BuildTrigger{
-				Name:          trigger.Name,
-				Disabled:      trigger.Disabled,
-				Filename:      trigger.ConfigFilename,
-				Substitutions: trigger.Substitutions,
-				TriggerTemplate: &cloudbuild.RepoSource{
-					BranchName: trigger.Branchname,
-					TagName:    trigger.Tagname,
-					ProjectId:  trigger.Projectid,
-					RepoName:   repoName,
+					return nil
 				},
-			})
-
-			if err != nil {
-				log.Panicf("Error creating trigger %s: %s", trigger.Name, err)
-			}
-
-			log.Printf("Trigger created: %s", trigger.Name)
-		} else {
-			// Update trigger
-			err := cb.UpdateTrigger(trigger.ConfigFilename, trigger.Projectid,
-				currentTrigger.Id, &cloudbuild.BuildTrigger{
-					Name:          currentTrigger.Name,
-					Disabled:      trigger.Disabled,
-					Filename:      trigger.ConfigFilename,
-					Substitutions: trigger.Substitutions,
-					TriggerTemplate: &cloudbuild.RepoSource{
-						BranchName: trigger.Branchname,
-						TagName:    trigger.Tagname,
-						ProjectId:  trigger.Projectid,
-						RepoName:   repoName,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "projectid,p",
+						Value:    "",
+						Usage:    "Project ID of the GCP project",
+						Required: true,
 					},
-				})
-			if err != nil {
-				log.Panicf("Error updating trigger %s: %s", trigger.Name, err)
-			}
+					&cli.StringFlag{
+						Name:     "output,o",
+						Value:    "",
+						Usage:    "Output directory to publish config files",
+						Required: true,
+					},
+				},
+			},
+			{
+				Name:  "push",
+				Usage: "Create/Update cloud build pipelines from the proveided config files",
+				Action: func(c *cli.Context) error {
+					triggers := []cloudbuildops.TriggerConfig{}
+					for _, filename := range c.Args() {
+						triggers = append(triggers, cloudbuildops.ReadTriggerConfig(filename))
+					}
 
-			log.Printf("Trigger updated: %s", trigger.Name)
-		}
+					err := cb.Push(triggers)
+					if err != nil {
+						return err
+					}
+
+					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringSliceFlag{
+						Name:     "config,c",
+						Usage:    "Path to config files (Supports wildcards)",
+						Required: true,
+					},
+				},
+			},
+		},
+	}
+
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
 	}
 }

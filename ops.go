@@ -66,6 +66,15 @@ func (cb *CB) GetTrigger(repoName, triggerName, projectID string) (*cloudbuild.B
 	return nil, nil
 }
 
+func (cb *CB) GetTriggerList(projectID string) ([]*cloudbuild.BuildTrigger, error) {
+	triggers, err := cb.cloudBuild.Projects.Triggers.List(projectID).Do()
+	if err != nil {
+		return nil, err
+	}
+
+	return triggers.Triggers, nil
+}
+
 func (cb *CB) UpdateTrigger(filename, projectID, triggerID string, trigger *cloudbuild.BuildTrigger) error {
 	_, err := cb.cloudBuild.Projects.Triggers.Patch(projectID, triggerID, trigger).Do()
 	if err != nil {
