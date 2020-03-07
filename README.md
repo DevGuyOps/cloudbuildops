@@ -31,6 +31,8 @@ Create/Update cloud build pipelines from the proveided config files
 | ------------ | ----------------------------------------- | -------- |
 | -config / -c | Path to config files (Supports wildcards) | TRUE     |
 
+#### Example usage
+
 ```
 ./cloudbuildops push -c pipelines/*
 ```
