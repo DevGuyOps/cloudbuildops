@@ -1,0 +1,23 @@
+git:
+  provider: bitbucket
+  project: cool-project
+  repo: awesome-backend
+trigger:
+  - name: master
+    disabled: true
+    projectid: cool-project
+    branchname: ""
+    tagname: .*
+    configfilename: cloudbuild.yaml
+    substitutions:
+      a: "1"
+      b: "2"
+  - name: master
+    disabled: false
+    projectid: cool-project
+    branchname: master
+    tagname: ""
+    configfilename: cloudbuild.yaml
+    substitutions:
+      a: "1"
+      b: "2"
