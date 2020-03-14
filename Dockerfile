@@ -3,7 +3,6 @@ FROM golang:alpine as builder
 WORKDIR /go/src/app
 COPY . .
 
-RUN go get
 RUN go build -o cloudbuildops cmd/cloudbuildops/*.go
 
 # Run Container
